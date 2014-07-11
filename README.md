@@ -185,16 +185,16 @@ pal:init([
 
 ### List of workflows
 
-Provider | Workflow                       | Description
----------|--------------------------------|----------------
-Google   | `pal_google_oauth2_authcode`   | Google Login (OAuth2 Authorization Code Grant)
-Google   | `pal_google_oauth2_tokeninfo`  | Validating an ID token
-Google   | `pal_google_oauth2_people`     | Obtaining user profile information
-Facebook | `pal_facebook_oauth2_authcode` | Facebook Login (OAuth2 Authorization Code Grant)
-Facebook | `pal_facebook_oauth2_user`     | Obtaining user profile information
-OAuth2   | `pal_oauth2_authcode`          | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
-Basic    | `pal_basic`                    | HTTP Basic Access Authentication, [RFC 2617][rfc2617]
-Initial  | `pal_authentication`           | Initial and the simplest behaviour of any workflow
+Provider | Workflow                                              | Description
+---------|-------------------------------------------------------|----------------
+Google   | [`pal_google_oauth2_authcode`][pal-google-oauth2]     | Google Login (OAuth2 Authorization Code Grant)
+Google   | [`pal_google_oauth2_tokeninfo`][pal-google-oauth2]    | Validating an ID token
+Google   | [`pal_google_oauth2_people`][pal-google-oauth2]       | Obtaining user profile information
+Facebook | [`pal_facebook_oauth2_authcode`][pal-facebook-oauth2] | Facebook Login (OAuth2 Authorization Code Grant)
+Facebook | [`pal_facebook_oauth2_user`][pal-facebook-oauth2]     | Obtaining user profile information
+OAuth2   | [`pal_oauth2_authcode`][pal-oauth2]                   | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
+Basic    | [`pal_basic`][pal-basic]                              | HTTP Basic Access Authentication, [RFC 2617][rfc2617]
+Initial  | [`pal_authentication`][pal]                           | Initial and the simplest behaviour of any workflow
 
 ### License
 
@@ -215,5 +215,10 @@ Provided under the terms of [the MIT license][license].
 [pal-workflow-sequence-or-img]:misc/pal-workflow-sequence-or.png
 [pal-workflow-sequence-or-and-img]:misc/pal-workflow-sequence-or-and.png
 [pal-workflow-group-img]:misc/pal-workflow-group.png
+[pal]:https://github.com/manifest/pal
+[pal-basic]:https://github.com/manifest/pal-basic
+[pal-oauth2]:https://github.com/manifest/pal_oauth2.git
+[pal-google-oauth2]:https://github.com/manifest/pal_google_oauth2.git
+[pal-facebook-oauth2]:https://github.com/manifest/pal_facebook_oauth2.git
 [pal-example]:https://github.com/manifest/pal-example
 
