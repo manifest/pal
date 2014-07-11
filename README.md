@@ -217,8 +217,8 @@ Provided under the terms of [the MIT license][license].
 [pal-workflow-group-img]:misc/pal-workflow-group.png
 [pal]:https://github.com/manifest/pal
 [pal-basic]:https://github.com/manifest/pal-basic
-[pal-oauth2]:https://github.com/manifest/pal_oauth2.git
-[pal-google-oauth2]:https://github.com/manifest/pal_google_oauth2.git
-[pal-facebook-oauth2]:https://github.com/manifest/pal_facebook_oauth2.git
+[pal-oauth2]:https://github.com/manifest/pal-oauth2.git
+[pal-google-oauth2]:https://github.com/manifest/pal-google-oauth2.git
+[pal-facebook-oauth2]:https://github.com/manifest/pal-facebook-oauth2.git
 [pal-example]:https://github.com/manifest/pal-example
 
