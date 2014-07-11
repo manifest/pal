@@ -1,0 +1,21 @@
+# OSX
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# vim
+.*.sw[a-z]
+*.un~
+Session.vim
+
+# project
+deps
+ebin
+doc
+log
+priv/mns_drv.so
+.eunit
+.dialyzer_plt
+.rebar
+
