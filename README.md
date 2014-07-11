@@ -1,5 +1,7 @@
 # Pragmatic Authentication Library
 
+[![Build Status][travis_img]][travis]
+
 standardized multi-provider authentication library and the best pal of Cowboy
 
 ### Introduction
@@ -190,15 +192,17 @@ Google   | `pal_google_oauth2_tokeninfo`  | Validating an ID token
 Google   | `pal_google_oauth2_people`     | Obtaining user profile information
 Facebook | `pal_facebook_oauth2_authcode` | Facebook Login (OAuth2 Authorization Code Grant)
 Facebook | `pal_facebook_oauth2_user`     | Obtaining user profile information
-OAuth2   | `pal_oauth2_authcode`          | OAuth2 Authorization Code Grant according to [RFC 6749][rfc6749]
-Basic    | `pal_basic`                    | HTTP Basic Access Authentication according to [RFC 2617][rfc2617]
-Initial  | `pal_authentication`           | Initial and the simplest behaviour of any workflow of PAL
+OAuth2   | `pal_oauth2_authcode`          | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
+Basic    | `pal_basic`                    | HTTP Basic Access Authentication, [RFC 2617][rfc2617]
+Initial  | `pal_authentication`           | Initial and the simplest behaviour of any workflow
 
 ### License
 
 Provided under the terms of [the MIT license][license].
 
 [license]:http://www.opensource.org/licenses/MIT
+[travis]:https://travis-ci.org/manifest/pal
+[travis_img]:https://secure.travis-ci.org/manifest/pal.png
 [cowboy]:https://github.com/extend/cowboy
 [omniauth]:https://github.com/intridea/omniauth
 [friend]:https://github.com/cemerick/friend

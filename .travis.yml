@@ -1,0 +1,7 @@
+language: erlang
+notifications:
+  email:
+    on_success: never
+    on_failure: always
+otp_release:
+  - 17.0
