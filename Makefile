@@ -1,10 +1,9 @@
-.PHONY: all deps build build-plt dialyze test test-total doc clean distclean start
+.PHONY: all deps build build-plt dialyze xref test test-total doc clean distclean start
 
 all: build
 
 deps:
 	rebar get-deps
-	rebar update-deps
 
 build:
 	rebar compile
@@ -26,10 +25,13 @@ dialyze:
 		-Wrace_conditions \
 		-Wunmatched_returns 
 
-test: build
-	rebar -v skip_deps=true eunit
+xref:
+	rebar xref skip_deps=true
 
-test-total: dialyze test
+test: build
+	rebar eunit -v skip_deps=true
+
+test-total: test xref dialyze
 
 doc:
 	rebar doc skip_deps=true

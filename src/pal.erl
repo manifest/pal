@@ -191,14 +191,14 @@ normalize(RespReq, _) ->
 
 -spec onfailure(pal_workflow:failure_reason(), Req) -> {response(), Req} when Req :: cowboy_req:req().
 onfailure(Reason, Req) ->
-	{ok, Req2} =
+	Req2 =
 		cowboy_req:reply(
 			422,
 			[{?CONTENT_TYPE, <<"application/json">>}],
 			pal_workflow:failure_to_json(Reason),
 			Req),
 
-	{halt, Req2}.
+	{stop, Req2}.
 
 -spec onsuccess(map(), Req) -> {response(), Req} when Req :: cowboy_req:req().
 onsuccess(M, Req) ->
@@ -221,7 +221,7 @@ onundefined(Req) ->
 -define(FAIL, {fail, <<>>}).
 -define(FC, fun(M, Req) -> {M#{a => pt_map:get(a, M, 0) + 1}, Req} end).
 -define(FU, fun(_, Req) -> {undefined, Req} end).
--define(FH, fun(_, Req) -> {halt, Req} end).
+-define(FS, fun(_, Req) -> {stop, Req} end).
 -define(FF, fun(_, Req) -> {?FAIL, Req} end).
 
 execute_or_test_() ->
@@ -229,8 +229,8 @@ execute_or_test_() ->
 		[	{"ok any",          [?FC, ?FC, ?FC], {#{a => 1}, ?REQ}},
 			{"undefined front", [?FU, ?FC, ?FC], {#{a => 1}, ?REQ}},
 			{"undefined back",  [?FC, ?FC, ?FU], {#{a => 1}, ?REQ}},
-			{"halt front",      [?FH, ?FC, ?FC], {halt, ?REQ}},
-			{"halt back",       [?FC, ?FC, ?FH], {#{a => 1}, ?REQ}},
+			{"stop front",      [?FS, ?FC, ?FC], {stop, ?REQ}},
+			{"stop back",       [?FC, ?FC, ?FS], {#{a => 1}, ?REQ}},
 			{"fail front",      [?FF, ?FC, ?FC], {?FAIL, ?REQ}},
 			{"fail back",       [?FC, ?FC, ?FF], {#{a => 1}, ?REQ}} ],
 
@@ -241,8 +241,8 @@ execute_and_test_() ->
 		[	{"ok all",          [?FC, ?FC, ?FC], {#{a => 3}, ?REQ}},
 			{"undefined front", [?FU, ?FC, ?FC], {undefined, ?REQ}},
 			{"undefined back",  [?FC, ?FC, ?FU], {undefined, ?REQ}},
-			{"halt front",      [?FH, ?FC, ?FC], {halt, ?REQ}},
-			{"halt back",       [?FC, ?FC, ?FH], {halt, ?REQ}},
+			{"stop front",      [?FS, ?FC, ?FC], {stop, ?REQ}},
+			{"stop back",       [?FC, ?FC, ?FS], {stop, ?REQ}},
 			{"fail front",      [?FF, ?FC, ?FC], {?FAIL, ?REQ}},
 			{"fail back",       [?FC, ?FC, ?FF], {?FAIL, ?REQ}} ],
 
@@ -252,7 +252,7 @@ execute_nested_test_() ->
 	Test =
 		[	{"ok",               [?FU, [?FC, [?FC, ?FC], ?FC], ?FC], {#{a => 3}, ?REQ}},
 			{"undefined middle", [?FU, [?FC, [?FU], ?FC], ?FC],      {#{a => 1}, ?REQ}},
-			{"halt      middle", [?FU, [?FC, [?FH], ?FC], ?FC],      {halt, ?REQ}},
+			{"stop      middle", [?FU, [?FC, [?FS], ?FC], ?FC],      {stop, ?REQ}},
 			{"fail      middle", [?FU, [?FC, [?FF], ?FC], ?FC],      {?FAIL, ?REQ}} ],
 
 	[{Desc, ?_assertEqual(Output, execute_or(?M, ?REQ, Input))} || {Desc, Input, Output} <- Test].

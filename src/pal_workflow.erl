@@ -37,7 +37,7 @@
 %% Types
 -type options()        :: pt_mlist:mlist().
 -type failure_reason() :: binary() | [{binary(), binary()}] | map().
--type response()       :: halt | {fail, failure_reason()} | undefined | map().
+-type response()       :: stop | {fail, failure_reason()} | undefined | map().
 -type handler(W)       :: {Mod :: module(), W}.
 -type initializer()    :: {module(), options()} | options().
 
@@ -66,17 +66,17 @@ flush_session(undefined, Req) ->
 flush_session(Session, Req) ->
 	Session:flush(Req).
 
--spec reply(cowboy:http_status(), module(), Req) -> {ok, Req} when Req :: cowboy_req:req().
+-spec reply(cowboy:http_status(), module(), Req) -> Req when Req :: cowboy_req:req().
 reply(Status, Session, Req) ->
 	Req2 = flush_session(Session, Req),
 	cowboy_req:reply(Status, Req2).
 
--spec reply(cowboy:http_status(), cowboy:http_headers(), module(), Req) -> {ok, Req} when Req :: cowboy_req:req().
+-spec reply(cowboy:http_status(), cowboy:http_headers(), module(), Req) -> Req when Req :: cowboy_req:req().
 reply(Status, Headers, Session, Req) ->
 	Req2 = flush_session(Session, Req),
 	cowboy_req:reply(Status, Headers, Req2).
 
--spec reply(cowboy:http_status(), cowboy:http_headers(), iodata(), module(), Req) -> {ok, Req} when Req :: cowboy_req:req().
+-spec reply(cowboy:http_status(), cowboy:http_headers(), iodata(), module(), Req) -> Req when Req :: cowboy_req:req().
 reply(Status, Headers, Body, Session, Req) ->
 	Req2 = flush_session(Session, Req),
 	cowboy_req:reply(Status, Headers, Body, Req2).
