@@ -25,7 +25,7 @@ case pal:authenticate(Req, W) of
 		io:format("User has been authenticated but not authorized:~n~p~n", [M]);
 	{#{} = M, Req2} ->
 		io:format("User hasn't been authenticated:~n~p~n", [M]);
-	{halt, Req2} ->
+	{stop, Req2} ->
 		io:format("Error has occured or workflow must return an HTTP response as a part of normal execution")
 end.
 
@@ -64,7 +64,7 @@ The result of the workflow execution will be one of the following:
 	when not enough data for normal execution and the control should be delegated to an another workflow
 - *failure()* :: `{{fail, Reason}, Req}`  
 	when an error has occurred, `Reason` will contain the reason
-- *halt()* :: `{halt, Req}`  
+- *stop()* :: `{stop, Req}`  
 	when workflow must return an HTTP response as a part of normal execution  
 	(for instance, redirect to the login page of OAuth2 provider)
 
@@ -128,7 +128,7 @@ The process of delegating control between workflows may differ depending on the 
 
 ![pal-sequence-end][pal-workflow-sequence-and-img]
 
-- In case of or-sequence, the control will be delegated to the next workflow if previous one returns *undefined()*. The sequence will be stopped if any of workflow returns *halt()* or *failure()*
+- In case of or-sequence, the control will be delegated to the next workflow if previous one returns *undefined()*. The sequence will be stopped if any of workflow returns *stop()* or *failure()*
 
 ![pal-sequence-or][pal-workflow-sequence-or-img]
 
@@ -146,7 +146,7 @@ and its value is reduced to one of two possible (by default, user of library can
 - *success()* :: `{Output, Req}`  
 	if the result obtained from the sequence of workflows is *undefined()*
 	the `Output` will contain an empty Erlang map
-- *halt()* :: `{halt, Req}`  
+- *stop()* :: `{stop, Req}`  
 	if the result obtained from the sequence of workflows is *failure()*
 	the HTTP response with the status code equals 422 and the body containing a reason of failure in json format
 	will be generated
