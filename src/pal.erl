@@ -30,6 +30,7 @@
 	init/2,
 	new/1,
 	new/2,
+	new/3,
 	authenticate/2
 ]).
 
@@ -49,12 +50,12 @@
 -type handler_desc()       :: module() | handler_fun().
 -type handler_desc_tree()  :: [handler_desc() | handler_desc_tree()].
 
--type desc() :: {Provider :: any(), Opts :: options()}
-						  | {Provider :: any(), Workflow :: handler_desc_tree()}
-						  | {Provider :: any(), Workflow :: handler_desc_tree(), Opts :: options()}.
+-type desc() :: {Input :: map(), Opts :: options()}
+						  | {Input :: map(), Workflow :: handler_desc_tree()}
+						  | {Input :: map(), Workflow :: handler_desc_tree(), Opts :: options()}.
 
 -record(gwf, {
-	provider    :: any(),
+	input       :: map(),
 	handlers    :: handler_tree(),
 	onfailure   :: failure_callback(),
 	onsuccess   :: success_callback(),
@@ -74,13 +75,11 @@ init(Descs) ->
 	init(Descs, []).
 
 -spec init(desc() | [desc()], options()) -> workflow() | [workflow()].
-init({Provider, Ds}, GlobalOpts) ->
-	init({Provider, Ds, []}, GlobalOpts);
-init({Provider, Ds, Opts}, GlobalOpts) ->
+init({Input, Ds}, GlobalOpts) ->
+	init({Input, Ds, []}, GlobalOpts);
+init({Input, Ds, Opts}, GlobalOpts) ->
 	Opts2 = pt_mlist:merge(GlobalOpts, Opts),
-	W = new(Ds, Opts2),
-	%% Initialization of workflow group specific options
-	W#gwf{provider = Provider};
+	new(Input, Ds, Opts2);
 init(Descs, GlobalOpts) ->
 	lists:map(fun(Desc) -> init(Desc, GlobalOpts) end, Descs).
 
@@ -90,6 +89,10 @@ new(Ds) ->
 
 -spec new(handler_desc_tree(), options()) -> workflow().
 new(Ds, Opts) ->
+	new(#{}, Ds, Opts).
+
+-spec new(map(), handler_desc_tree(), options()) -> workflow().
+new(Input, Ds, Opts) ->
 	Hs =
 		pt_list:deepmap(
 			fun
@@ -101,6 +104,7 @@ new(Ds, Opts) ->
 			Ds),
 
 	#gwf{
+		input = Input,
 		handlers = Hs,
 		onfailure = pt_mlist:get(onfailure, Opts, fun onfailure/2),
 		onsuccess = pt_mlist:get(onsuccess, Opts, fun onsuccess/2),
@@ -110,20 +114,8 @@ new(Ds, Opts) ->
 authenticate(Req, Gs) ->
 	{RespReq, G} = authenticate_dirty(Req, Gs),
 	case G of
-		undefined ->
-			normalize(RespReq, new([]));
-		_ ->
-			case normalize(RespReq, G) of
-				{Resp, Req2} when is_map(Resp) ->
-					case G#gwf.provider of
-						undefined ->
-							{Resp, Req2};
-						Val ->
-							{Resp#{provider => Val}, Req2}
-					end;
-				RespReq2 ->
-					RespReq2
-			end
+		undefined -> normalize(RespReq, new([]));
+		_         -> normalize(RespReq, G)
 	end.
 
 %% ==================================================================
@@ -140,8 +132,8 @@ authenticate_dirty(Req, [G|Gs]) ->
 		RespReqG ->
 			RespReqG
 	end;
-authenticate_dirty(Req, #gwf{handlers = Hs} = G) ->
-	RespReq = execute_and(#{}, Req, Hs),
+authenticate_dirty(Req, #gwf{input = Input, handlers = Hs} = G) ->
+	RespReq = execute_and(Input, Req, Hs),
 	{RespReq, G}.
 
 -spec execute(map(), Req, H) -> {response(), Req} when Req :: cowboy_req:req(), H :: handler().

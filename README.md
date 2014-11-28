@@ -74,8 +74,6 @@ The result of the workflow execution will be one of the following:
 
 The `Input` and the `Output` of workflow represent an authentication map which should have the following structure:
 
-- `provider` (managed by the library) -
-		The provider with which the user authenticated (e.g. 'twitter' or 'facebook').
 - `uid` -
 		An identifier unique to the given provider, such as a Twitter user ID. Should be stored as a string.
 - `info` -
@@ -156,7 +154,7 @@ and its value is reduced to one of two possible (by default, user of library can
 It is possible to create more than one group of sequences in the main workflow.
 In this case the control of execution is delegated to the next group on the basis of or-sequence.
 To be able to determine the execution of the which group is completed successfully,
-the user sets a provider value for each group. That value will be added to the final authentication map.
+the user sets an input map for each group. That map will be merged to the final authentication map.
 
 #### Examples of creating the main workflow
 
@@ -164,6 +162,7 @@ the user sets a provider value for each group. That value will be added to the f
 %% minimal example
 pal:new([workflow(1)]).
 pal:new([workflow(1)], Opts).
+pal:new(#{name => "example"}, [workflow(1)], Opts).
 
 %% and-sequence: workflow(1) and workflow(2)
 pal:new([workflow(1), workflow(2)]).
@@ -174,12 +173,12 @@ pal:new([[workflow(1), workflow(2)]]).
 %% or-and-sequence: (workflow(1) or workflow(2)) and workflow(3)
 pal:new([[workflow(1), workflow(2)], workflow(3)]).
 
-%% named groups
-pal:init([{"example", pal_workflow}]).
-pal:init([{"example", [workflow(1), workflow(2)], Opts}]).
+%% groups
+pal:init([{#{name => "example"}, pal_workflow}]).
+pal:init([{#{name => "example"}, [workflow(1), workflow(2)], Opts}]).
 pal:init([
-		{"example-1", [workflow(1), workflow(2)], LocalOpts1},
-		{"example-2", [workflow(3)], LocalOpts2}
+		{#{name => "example-1"}, [workflow(1), workflow(2)], LocalOpts1},
+		{#{name => "example-2"}, [workflow(3)], LocalOpts2}
 	], GlobalOpts).
 ```
 
