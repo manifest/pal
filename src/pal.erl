@@ -78,7 +78,7 @@ init(Descs) ->
 init({Input, Ds}, GlobalOpts) ->
 	init({Input, Ds, []}, GlobalOpts);
 init({Input, Ds, Opts}, GlobalOpts) ->
-	Opts2 = pt_mlist:merge(GlobalOpts, Opts),
+	Opts2 = pt_kvterm:merge(GlobalOpts, Opts),
 	new(Input, Ds, Opts2);
 init(Descs, GlobalOpts) ->
 	lists:map(fun(Desc) -> init(Desc, GlobalOpts) end, Descs).
@@ -106,9 +106,9 @@ new(Input, Ds, Opts) ->
 	#gwf{
 		input = Input,
 		handlers = Hs,
-		onfailure = pt_mlist:get(onfailure, Opts, fun onfailure/2),
-		onsuccess = pt_mlist:get(onsuccess, Opts, fun onsuccess/2),
-		onundefined = pt_mlist:get(onundefined, Opts, fun onundefined/1)}.
+		onfailure = pt_kvterm:get(onfailure, Opts, fun onfailure/2),
+		onsuccess = pt_kvterm:get(onsuccess, Opts, fun onsuccess/2),
+		onundefined = pt_kvterm:get(onundefined, Opts, fun onundefined/1)}.
 
 -spec authenticate(Req, G | [G]) -> {Resp, Req} when Resp :: response(), Req :: cowboy_req:req(), G :: workflow().
 authenticate(Req, Gs) ->

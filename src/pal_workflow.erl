@@ -35,7 +35,7 @@
 ]).
 
 %% Types
--type options()        :: pt_mlist:mlist().
+-type options()        :: pt_kvterm:kvterm().
 -type failure_reason() :: binary() | [{binary(), binary()}] | map().
 -type response()       :: stop | {fail, failure_reason()} | undefined | map().
 -type handler(W)       :: {Mod :: module(), W}.

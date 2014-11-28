@@ -114,7 +114,7 @@ update_handler_state(Fun, #wf{handler = {HMod, HS}} = W) ->
 init({Handler, Opts}) ->
 	Workflow =
 		#wf{
-			includes = pt_mlist:get(includes, Opts, ?DEFAULT_INCLUDES),
+			includes = pt_kvterm:get(includes, Opts, ?DEFAULT_INCLUDES),
 			handler = Handler},
 	
 	{?MODULE, Workflow}.
