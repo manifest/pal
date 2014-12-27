@@ -26,10 +26,6 @@
 
 %% API
 -export([
-	flush_session/2,
-	reply/3,
-	reply/4,
-	reply/5,
 	from_json/2,
 	failure_to_json/1
 ]).
@@ -59,27 +55,6 @@
 %% ==================================================================
 %% API
 %% ==================================================================
-
--spec flush_session(module(), Req) -> Req when Req :: cowboy_req:req().
-flush_session(undefined, Req) ->
-	Req;
-flush_session(Session, Req) ->
-	Session:flush(Req).
-
--spec reply(cowboy:http_status(), module(), Req) -> Req when Req :: cowboy_req:req().
-reply(Status, Session, Req) ->
-	Req2 = flush_session(Session, Req),
-	cowboy_req:reply(Status, Req2).
-
--spec reply(cowboy:http_status(), cowboy:http_headers(), module(), Req) -> Req when Req :: cowboy_req:req().
-reply(Status, Headers, Session, Req) ->
-	Req2 = flush_session(Session, Req),
-	cowboy_req:reply(Status, Headers, Req2).
-
--spec reply(cowboy:http_status(), cowboy:http_headers(), iodata(), module(), Req) -> Req when Req :: cowboy_req:req().
-reply(Status, Headers, Body, Session, Req) ->
-	Req2 = flush_session(Session, Req),
-	cowboy_req:reply(Status, Headers, Body, Req2).
 
 -spec failure_to_json(failure_reason()) -> binary().
 failure_to_json(B) when is_binary(B) ->
