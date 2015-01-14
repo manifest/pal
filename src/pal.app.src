@@ -6,8 +6,6 @@
 	{applications, [
 		kernel,
 		stdlib,
-		jsxn,
-		cowboy,
 		pt
 	]},
 	{env, []}

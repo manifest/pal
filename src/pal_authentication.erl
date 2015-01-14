@@ -1,7 +1,7 @@
 %% ------------------------------------------------------------------
 %% The MIT License
 %%
-%% Copyright (c) 2014 Andrei Nesterov <ae.nesterov@gmail.com>
+%% Copyright (c) 2014-2015 Andrei Nesterov <ae.nesterov@gmail.com>
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a copy
 %% of this software and associated documentation files (the "Software"), to
@@ -25,151 +25,91 @@
 -module(pal_authentication).
 -behaviour(pal_workflow).
 
-%% API
+%% Workflow callbacks
 -export([
-	raw_info/1,
-	handler/1,
-	handler_state/1,
-	update_handler_state/2
+	decl/0,
+	handle/4
 ]).
 
-%% Handler callbacks
--export([
-	init/1,
-	execute/3
-]).
-
-%% Definitions
--define(DEFAULT_INCLUDES, [credentials, info, extra, rules]).
+%% Definition
+-define(INCLUDES, [uid, credentials, info, extra, rules]).
 
 %% Types
--record(wf, {
-	raw_info = #{} :: map(),
-	includes       :: [atom()],
-	handler        :: pal_workflow:handler(any())
-}).
+-type rawdata() :: [{binary(), binary() | true}].
+-type result()
+	:: {ok,    Data     :: rawdata()}
+	 | {stop,  HttpResp :: pal_http:response()}
+	 | {error, Reason   :: pal_workflow:error_reason()}.
 
--type workflow() :: #wf{}.
-
--export_type([workflow/0]).
+-export_type([result/0, rawdata/0]).
 
 %% Callbacks
--callback init(Initializer) -> Handler
+-callback authenticate(Handlers, Data, Metadata, State) -> Result
 	when
-		Initializer :: pal_workflow:initializer(),
-		Handler     :: pal_workflow:handler(workflow()).
-
--callback authenticate(AuthM, Req, Workflow) -> {Resp, Req}
-	when
-		AuthM       :: map(),
-		Workflow    :: workflow(),
-		Req         :: cowboy_req:req(),
-		Resp        :: pal_workflow:response().
+		Handlers :: list(module()),
+		Data     :: map(),
+		Metadata :: map(),
+		State    :: map(),
+		Result   :: pal_authentication:result().
 
 %% Optional.
 %%
-%%	-callback credentials(workflow()) -> map().
+%%	-callback uid(RawData :: rawdata()) -> binary().
 
 %% Optional.
 %%
-%%	-callback uid(workflow()) -> binary().
+%%	-callback credentials(RawData :: rawdata(), Acc :: map()) -> map().
 
 %% Optional.
 %%
-%%	-callback info(workflow()) -> map().
+%%	-callback info(RawData :: rawdata(), Acc :: map()) -> map().
 
 %% Optional.
 %%
-%%	-callback extra(workflow()) -> map().
+%%	-callback extra(RawData :: rawdata(), Acc :: map()) -> map().
 
 %% Optional.
 %%
-%%	-callback rules(workflow()) -> map().
+%%	-callback rules(RawData :: rawdata(), Acc :: map()) -> map().
 
 %% ==================================================================
-%% API
+%% Workflow callbacks
 %% ==================================================================
 
--spec raw_info(workflow()) -> map().
-raw_info(#wf{raw_info = RawInfo}) ->
-	RawInfo.
+-spec decl() -> pt_workflow:declaration().
+decl() ->
+	Opts =
+		#{includes => ?INCLUDES},
 
--spec handler(workflow()) -> pal_workflow:handler(any()).
-handler(#wf{handler = H}) ->
-	H.
+	{?MODULE, Opts}.
 
--spec handler_state(workflow()) -> any().
-handler_state(#wf{handler = {_, HS}}) ->
-	HS.
-
--spec update_handler_state(fun((any()) -> any()), workflow()) -> workflow().
-update_handler_state(Fun, #wf{handler = {HMod, HS}} = W) ->
-	W#wf{handler = {HMod, Fun(HS)}}.
-
-%% ==================================================================
-%% Handler callbacks
-%% ==================================================================
-
--spec init({pal_workflow:handler(any()), pal_workflow:options()}) -> pal_workflow:handler(workflow()).
-init({Handler, Opts}) ->
-	Workflow =
-		#wf{
-			includes = pt_kvterm:get(includes, Opts, ?DEFAULT_INCLUDES),
-			handler = Handler},
-	
-	{?MODULE, Workflow}.
-
--spec execute(map(), Req, W) -> {Resp, Req} when Resp :: pal_workflow:response(), Req :: cowboy_req:req(), W :: workflow().
-execute(AuthM, Req, #wf{handler = {HMod, _}} = W) ->
-	case HMod:authenticate(AuthM, Req, W) of
-		{RawInfo, Req2} when is_map(RawInfo) ->
-			AuthM2 = prepare(AuthM, W#wf{raw_info = RawInfo}),
-			{AuthM2, Req2};
-		RespReq ->
-			RespReq
+-spec handle(list(module()), map(), map(), map()) -> pal_workflow:result().
+handle([_|T], Data, Meta, State) ->
+	case pt_modlist:callr_sublist(T, authenticate, [Data, Meta, State]) of
+		{ok, RawData} ->
+			Includes = pt_list:with(?INCLUDES, maps:get(includes, State, [])),
+			{ok, build(Includes, T, RawData, Data)};
+		Result ->
+			Result
 	end.
 
 %% ==================================================================
 %% Internal functions
 %% ==================================================================
 
--spec prepare(map(), workflow()) -> map().
-prepare(AuthM, W) ->
-	Put =
-		fun(Key, Map) ->
-			case call(Key, W) of
-				undefined -> Map;
-				Val       -> pt_map:put(Key, Val, Map)
-			end
-		end,
-
-	Merge =
-		fun(Key, Map) ->
-			case call(Key, W) of
-				undefined ->
-					Map;
-				Val ->
-					CurrVal = pt_map:get(Key, Map, #{}),
-					pt_map:put(Key, maps:merge(CurrVal, Val), Map)
-			end
-		end,
-
-	MergeWhenIncluded =
-		fun(Key, Map) ->
-			case lists:member(Key, W#wf.includes) of
-				true  -> Merge(Key, Map);
-				_     -> Map
-			end
-		end,
-
-	Put(uid, lists:foldl(MergeWhenIncluded, AuthM, ?DEFAULT_INCLUDES)).
-
--spec call(atom(), workflow()) -> undefined | any().
-call(Function, #wf{handler = {HMod, _}} = W) ->
-	case erlang:function_exported(HMod, Function, 1) of
-		true ->
-			HMod:Function(W);
-		false ->
-			undefined
-	end.
+-spec build(list(atom()), list(module()), rawdata(), map()) -> map().
+build([uid|T], Hs, Data, M) ->
+	case pt_modlist:callr(Hs, uid, [Data], error) of
+		error -> build(T, Hs, Data, M);
+		Val   -> build(T, Hs, Data, maps:put(uid, Val, M))
+	end;
+build([credentials|T], Hs, Data, M) ->
+	build(T, Hs, Data, pt_modlist:callr(Hs, credentials, [Data, M], M));
+build([H|T], Hs, Data, M) ->
+	Acc = maps:get(H, M, #{}),
+	case pt_modlist:callr(Hs, H, [Data, Acc], error) of
+		error -> build(T, Hs, Data, M);
+		Acc2  -> build(T, Hs, Data, maps:put(H, Acc2, M))
+	end;
+build([], _, _, M) -> M.
 
