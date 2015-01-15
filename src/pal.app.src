@@ -6,10 +6,7 @@
 	{applications, [
 		kernel,
 		stdlib,
-		jsxn,
-		cowboy,
-		pt,
-		pt_session
+		pt
 	]},
 	{env, []}
 ]}.

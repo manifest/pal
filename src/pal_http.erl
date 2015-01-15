@@ -22,36 +22,48 @@
 %% IN THE SOFTWARE.
 %% ------------------------------------------------------------------
 
--module(pal_workflow).
+-module(pal_http).
+
+%% API
+-export([
+	response/1,
+	response/2,
+	response/3,
+	reply/2
+]).
 
 %% Types
+-type status()     :: non_neg_integer().
+-type headers()    :: [{binary(), iodata()}].
 
--type error_reason() :: {Type :: atom(), Data :: any()}.
--type result()
-	:: {ok,    Data     :: map()}
-	 | {stop,  HttpResp :: pal_http:response()}
-	 | {error, Reason   :: error_reason()}.
+-record(resp, {
+	status         :: status(),
+	headers = []   :: headers(),
+	body    = <<>> :: iodata()
+}).
 
--export_type([result/0, error_reason/0]).
+-type response() :: #resp{}.
+-type request()  :: any().
 
-%% Callbacks
+-export_type([status/0, headers/0, response/0, request/0]).
 
--callback decl() -> pt_workflow:declaration().
+%% ==================================================================
+%% API
+%% ==================================================================
 
-%% Optional.
-%%
-%%	-callback init(Options) -> NewOptions
-%%		when
-%%			Options    :: map(),
-%%			NewOptions :: map().
+-spec response(status()) -> response().
+response(Status) ->
+	#resp{status = Status}.
 
-%% Optional.
-%%
-%%	-callback handle(Handlers, Data, Metadata, State) -> Result
-%%		when
-%%			Handlers :: list(module()),
-%%			Data     :: map(),
-%%			Metadata :: map(),
-%%			State    :: map(),
-%%			Result   :: result().
+-spec response(status(), headers()) -> response().
+response(Status, Headers) ->
+	#resp{status = Status, headers = Headers}.
+
+-spec response(status(), headers(), iodata()) -> response().
+response(Status, Headers, Body) ->
+	#resp{status = Status, headers = Headers, body = Body}.
+
+-spec reply(response(), fun((status(), headers(), iodata()) -> any())) -> any().
+reply(#resp{status = Status, headers = Headers, body = Body}, Fun) ->
+	Fun(Status, Headers, Body).
 

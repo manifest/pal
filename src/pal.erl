@@ -1,7 +1,7 @@
 %% ------------------------------------------------------------------
 %% The MIT License
 %%
-%% Copyright (c) 2014 Andrei Nesterov <ae.nesterov@gmail.com>
+%% Copyright (c) 2014-2015 Andrei Nesterov <ae.nesterov@gmail.com>
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a copy
 %% of this software and associated documentation files (the "Software"), to
@@ -26,236 +26,55 @@
 
 %% API
 -export([
-	init/1,
-	init/2,
-	new/1,
 	new/2,
-	authenticate/2
+	group/2,
+	authenticate/2,
+	authenticate/3
 ]).
 
-%% Definitions
--define(CONTENT_TYPE, <<"content-type">>).
-
 %% Types
--type response()           :: pal_workflow:response().
--type failure_callback()   :: fun((pal_workflow:failure_reason(), cowboy_req:req()) -> {response(), cowboy_req:req()}).
--type success_callback()   :: fun((map(), cowboy_req:req()) -> {response(), cowboy_req:req()}).
--type undefined_callback() :: fun((cowboy_req:req()) -> {response(), cowboy_req:req()}).
+-type workflow() :: pt_workflow:workflow().
+-type result()   :: pal_workflow:result().
+-type group()    :: list(workflow()).
 
--type options()            :: pal_workflow:options().
--type handler_fun()        :: fun((Input :: map(), Req :: cowboy_req:req()) -> {Resp :: response(), Req :: cowboy_req:req()}).
--type handler()            :: pal_workflow:handler(any()) | handler_fun().
--type handler_tree()       :: [handler() | handler_tree()].
--type handler_desc()       :: module() | handler_fun().
--type handler_desc_tree()  :: [handler_desc() | handler_desc_tree()].
-
--type desc() :: {Provider :: any(), Opts :: options()}
-						  | {Provider :: any(), Workflow :: handler_desc_tree()}
-						  | {Provider :: any(), Workflow :: handler_desc_tree(), Opts :: options()}.
-
--record(gwf, {
-	provider    :: any(),
-	handlers    :: handler_tree(),
-	onfailure   :: failure_callback(),
-	onsuccess   :: success_callback(),
-	onundefined :: undefined_callback()
-}).
-
--type workflow() :: #gwf{}.
-
--export_type([workflow/0, response/0]).
+-export_type([workflow/0, group/0, result/0]).
 
 %% ==================================================================
 %% API
 %% ==================================================================
 
--spec init([desc()]) -> [workflow()].
-init(Descs) ->
-	init(Descs, []).
+-spec new(module(), map()) -> workflow().
+new(Mod, Opts) ->
+	pt_workflow:init(Mod, Opts).
 
--spec init(desc() | [desc()], options()) -> workflow() | [workflow()].
-init({Provider, Ds}, GlobalOpts) ->
-	init({Provider, Ds, []}, GlobalOpts);
-init({Provider, Ds, Opts}, GlobalOpts) ->
-	Opts2 = pt_mlist:merge(GlobalOpts, Opts),
-	W = new(Ds, Opts2),
-	%% Initialization of workflow group specific options
-	W#gwf{provider = Provider};
-init(Descs, GlobalOpts) ->
-	lists:map(fun(Desc) -> init(Desc, GlobalOpts) end, Descs).
+-spec group(list(module()), map()) -> group().
+group(Workflows, Opts) ->
+	lists:map(fun(Mod) ->
+		pt_workflow:init(Mod, Opts)
+	end, Workflows).
 
--spec new(handler_desc_tree()) -> workflow().
-new(Ds) ->
-	new(Ds, []).
+-spec authenticate(map(), workflow() | group()) -> result().
+authenticate(Data, WG) ->
+	authenticate(Data, #{}, WG).
 
--spec new(handler_desc_tree(), options()) -> workflow().
-new(Ds, Opts) ->
-	Hs =
-		pt_list:deepmap(
-			fun
-				(Fun) when is_function(Fun) ->
-					Fun;
-				(Mod) ->
-					Mod:init(Opts)
-			end,
-			Ds),
-
-	#gwf{
-		handlers = Hs,
-		onfailure = pt_mlist:get(onfailure, Opts, fun onfailure/2),
-		onsuccess = pt_mlist:get(onsuccess, Opts, fun onsuccess/2),
-		onundefined = pt_mlist:get(onundefined, Opts, fun onundefined/1)}.
-
--spec authenticate(Req, G | [G]) -> {Resp, Req} when Resp :: response(), Req :: cowboy_req:req(), G :: workflow().
-authenticate(Req, Gs) ->
-	{RespReq, G} = authenticate_dirty(Req, Gs),
-	case G of
-		undefined ->
-			normalize(RespReq, new([]));
-		_ ->
-			case normalize(RespReq, G) of
-				{Resp, Req2} when is_map(Resp) ->
-					case G#gwf.provider of
-						undefined ->
-							{Resp, Req2};
-						Val ->
-							{Resp#{provider => Val}, Req2}
-					end;
-				RespReq2 ->
-					RespReq2
-			end
-	end.
+-spec authenticate(map(), map(), workflow() | group()) -> result().
+authenticate(Data, Meta, [H|T]) ->
+	handle_result(
+		pt_workflow:callr_sublist(handle, [Data, Meta], H),
+		Meta,
+		T);
+authenticate(Data, Meta, W) ->
+	handle_result(
+		pt_workflow:callr_sublist(handle, [Data, Meta], W),
+		Meta,
+		[]).
 
 %% ==================================================================
 %% Internal functions
 %% ==================================================================
 
--spec authenticate_dirty(Req, G | [G]) -> {{Resp, Req}, undefined | G} when Resp :: response(), Req :: cowboy_req:req(), G :: workflow().
-authenticate_dirty(Req, []) ->
-	{{undefined, Req}, undefined};
-authenticate_dirty(Req, [G|Gs]) ->
-	case authenticate_dirty(Req, G) of
-		{{undefined, Req2}, _} ->
-			authenticate_dirty(Req2, Gs);
-		RespReqG ->
-			RespReqG
-	end;
-authenticate_dirty(Req, #gwf{handlers = Hs} = G) ->
-	RespReq = execute_and(#{}, Req, Hs),
-	{RespReq, G}.
-
--spec execute(map(), Req, H) -> {response(), Req} when Req :: cowboy_req:req(), H :: handler().
-execute(Input, Req, H) ->
-	case H of
-		Fun when is_function(Fun) ->
-			Fun(Input, Req);
-		{Mod, W} ->
-			Mod:execute(Input, Req, W)
-	end.
-
--spec execute_or(map(), Req, HT) -> {response(), Req} when Req :: cowboy_req:req(), HT :: handler_tree().
-execute_or(_, Req, []) ->
-	{undefined, Req};
-execute_or(M, Req, [H|T]) ->
-	case execute_and(M, Req, H) of
-		{undefined, Req2} ->
-			execute_or(M, Req2, T);
-		MReq ->
-			MReq
-	end;
-execute_or(M, Req, H) ->
-	execute(M, Req, H).
-
--spec execute_and(map(), Req, HT) -> {response(), Req} when Req :: cowboy_req:req(), HT :: handler_tree().
-execute_and(M, Req, []) ->
-	{M, Req};
-execute_and(M, Req, [H|T]) ->
-	case execute_or(M, Req, H) of
-		{M2, Req2} when is_map(M2) ->
-			execute_and(M2, Req2, T);
-		MReq ->
-			MReq
-	end;
-execute_and(M, Req, H) ->
-	execute(M, Req, H).
-
--spec normalize({response(), Req}, G) -> {response(), Req} when Req :: cowboy_req:req(), G :: workflow().
-normalize({M, Req}, #gwf{onsuccess = OnSuccess}) when is_map(M) ->
-	OnSuccess(M, Req);
-normalize({{fail, Reason}, Req}, #gwf{onfailure = OnFailure}) ->
-	OnFailure(Reason, Req);
-normalize({undefined, Req}, #gwf{onundefined = OnUndefined}) ->
-	OnUndefined(Req);
-normalize(RespReq, _) ->
-	RespReq.
-
--spec onfailure(pal_workflow:failure_reason(), Req) -> {response(), Req} when Req :: cowboy_req:req().
-onfailure(Reason, Req) ->
-	{ok, Req2} =
-		cowboy_req:reply(
-			422,
-			[{?CONTENT_TYPE, <<"application/json">>}],
-			pal_workflow:failure_to_json(Reason),
-			Req),
-
-	{halt, Req2}.
-
--spec onsuccess(map(), Req) -> {response(), Req} when Req :: cowboy_req:req().
-onsuccess(M, Req) ->
-	{M, Req}.
-
--spec onundefined(Req) -> {response(), Req} when Req :: cowboy_req:req().
-onundefined(Req) ->
-	M = #{},
-	{M, Req}.
-
-%% ==================================================================
-%% Tests
-%% ==================================================================
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
--define(M, #{}).
--define(REQ, req).
--define(FAIL, {fail, <<>>}).
--define(FC, fun(M, Req) -> {M#{a => pt_map:get(a, M, 0) + 1}, Req} end).
--define(FU, fun(_, Req) -> {undefined, Req} end).
--define(FH, fun(_, Req) -> {halt, Req} end).
--define(FF, fun(_, Req) -> {?FAIL, Req} end).
-
-execute_or_test_() ->
-	Test =
-		[	{"ok any",          [?FC, ?FC, ?FC], {#{a => 1}, ?REQ}},
-			{"undefined front", [?FU, ?FC, ?FC], {#{a => 1}, ?REQ}},
-			{"undefined back",  [?FC, ?FC, ?FU], {#{a => 1}, ?REQ}},
-			{"halt front",      [?FH, ?FC, ?FC], {halt, ?REQ}},
-			{"halt back",       [?FC, ?FC, ?FH], {#{a => 1}, ?REQ}},
-			{"fail front",      [?FF, ?FC, ?FC], {?FAIL, ?REQ}},
-			{"fail back",       [?FC, ?FC, ?FF], {#{a => 1}, ?REQ}} ],
-
-	[{Desc, ?_assertEqual(Output, execute_or(?M, ?REQ, Input))} || {Desc, Input, Output} <- Test].
-
-execute_and_test_() ->
-	Test =
-		[	{"ok all",          [?FC, ?FC, ?FC], {#{a => 3}, ?REQ}},
-			{"undefined front", [?FU, ?FC, ?FC], {undefined, ?REQ}},
-			{"undefined back",  [?FC, ?FC, ?FU], {undefined, ?REQ}},
-			{"halt front",      [?FH, ?FC, ?FC], {halt, ?REQ}},
-			{"halt back",       [?FC, ?FC, ?FH], {halt, ?REQ}},
-			{"fail front",      [?FF, ?FC, ?FC], {?FAIL, ?REQ}},
-			{"fail back",       [?FC, ?FC, ?FF], {?FAIL, ?REQ}} ],
-
-	[{Desc, ?_assertEqual(Output, execute_and(?M, ?REQ, Input))} || {Desc, Input, Output} <- Test].
-
-execute_nested_test_() ->
-	Test =
-		[	{"ok",               [?FU, [?FC, [?FC, ?FC], ?FC], ?FC], {#{a => 3}, ?REQ}},
-			{"undefined middle", [?FU, [?FC, [?FU], ?FC], ?FC],      {#{a => 1}, ?REQ}},
-			{"halt      middle", [?FU, [?FC, [?FH], ?FC], ?FC],      {halt, ?REQ}},
-			{"fail      middle", [?FU, [?FC, [?FF], ?FC], ?FC],      {?FAIL, ?REQ}} ],
-
-	[{Desc, ?_assertEqual(Output, execute_or(?M, ?REQ, Input))} || {Desc, Input, Output} <- Test].
-
--endif.
+-spec handle_result(result(), map(), group()) -> result().
+handle_result({ok, _} = Ok, _, []) -> Ok;
+handle_result({ok, Data}, Meta, L) -> authenticate(Data, Meta, L);
+handle_result(Result, _, _)        -> Result.
 
