@@ -2,80 +2,154 @@
 
 [![Build Status][travis_img]][travis]
 
-standardized multi-provider authentication library and the best pal of Cowboy
+The standardized multi-provider authentication library.
 
 ### Introduction
 
-PAL is designed to minimize the effort of adding a user authentication
-for web applications written in Erlang using [Cowboy][cowboy] HTTP server.
-Any developer can extend the library by creating their own authentication workflow for everything from Facebook to LDAP.
+PAL is designed to minimize the efforts of integration
+a user authentication in web applications.
+It have written in pure Erlang and
+independed from HTTP server software or whatever framework.
+Any developer can extend the library, create their own authentication workflow
+for everything from Facebook to LDAP.
 PAL is inspired by [OmniAuth][omniauth], [Friend][friend] and [Passport][passport].
 
-### Hot to use
+#### How to use
 
-A simple example for those who prefer to study the code rather than documentation.  
-Complete working example can be found [here][pal-example].
+If you prefer to study the code rather documentation,
+the example below will show how to use the implementation of Google Login.  
+You also can find the complete example using PAL and [Cowboy][cowboy] HTTP server [here][pal-example].
+
+At first, you need to create the workflow.
+Workflow may have an required and optional options.
+We pass them and a name of the module with workflow implementation to the `pal:new/2` function.
 
 ```erlang
-W = pal:new([Workflow]),
-case pal:authenticate(Req, W) of
-	{#{uid := _} = M, Req2} ->
-		io:format("User has been authorized:~n~p~n", [M]);
-	{#{credentials := _} = M, Req2} ->
-		io:format("User has been authenticated but not authorized:~n~p~n", [M]);
-	{#{} = M, Req2} ->
-		io:format("User hasn't been authenticated:~n~p~n", [M]);
-	{stop, Req2} ->
-		io:format("Error has occured or workflow must return an HTTP response as a part of normal execution")
-end.
+Options =
+  #{client_id     => <<"...">>,
+    client_secret => <<"...">>,
+    redirect_uri  => <<"https://localhost/...">>}.
 
-%%	User has been authorized:
-%%	#{uid => <<"1234567890">>,
-%%	  info =>
-%%	    #{first_name => <<"John">>,
-%%	      last_name  => <<"Doe">>,
-%%	      name       => <<"John Doe">>},
-%%	  rules =>
-%%	    #{role => user},
-%%	  credentials =>
-%%	   #{access_token  => <<"token-value">>,
-%%	     token_type    => <<"Bearer">>,
-%%	     expires_in    => 3600,
-%%	     refresh_token => <<"another-token-value">>}}
+Workflow =
+  pal:new(
+    pal_google_oauth2_authcode,
+    Options).
+```
+
+When our workflow was created, the half an job had been done.
+All we now need, parse the request and pass that data to the `pal:authenticate/2` function.
+
+```erlang
+pal:authenticate(Data, Workflow).
+
+%% #{access_token => <<"...">>,
+%%   token_type => <<"Bearer">>,
+%%   expires_in => 3600,
+%%   id_token => <<"...">>,
+%%   code => <<"...">>}
+```
+
+That's all.
+
+#### How it works
+
+When a user come to us first time, the request doesn't contain any data.
+We have to redirect a user to authentication provider and we do it:
+
+```erlang
+pal:authenticate(#{}, Workflow).
+
+%% {stop,{resp,303, [{<<"location">>, <<"https://accounts.google.com/...">>}], <<>>}}
+```
+
+For Google Login (OAuth2 Authorization Code Grant) workflow
+we need to retrieve `code`, `state` and `error` fields from the query string of request
+if any of them appears, and pass that data to the `pal:authenticate/2` function.
+
+```erlang
+pal:authenticate(#{code => <<"...">>}, Workflow).
+
+%% #{access_token => <<"...">>,
+%%   token_type => <<"Bearer">>,
+%%   expires_in => 3600,
+%%   id_token => <<"...">>,
+%%   code => <<"...">>}
+```
+
+[Cowboy][cowboy] specific implementation parsing the data of request:
+
+```erlang
+Data =
+	lists:foldl(
+		fun({Key, Val}, M) ->
+			maps:put(binary_to_existing_atom(Key, utf8), Val, M)
+		end,
+		#{},
+		pt_kvlist:with(
+			[<<"code">>, <<"state">>, <<"error">>],
+			cowboy_req:parse_qs(Req)))
+```
+
+#### Group
+
+We can combine more than one workflow in the sequence.
+Below, we are using the `access_token` (result of the first workflow execution)
+to obtain the Google+ profile information.
+
+```erlang
+Workflow =
+  pal:group(
+    [pal_google_oauth2_authcode, pal_google_oauth2_people],
+    Options),
+
+pal:authenticate(Data, Workflow).
+
+%% #{uid => <<"...">>,
+%%   info =>
+%%     #{name => <<"John Doe">>,
+%%       first_name => <<"John">>,
+%%       last_name => <<"Doe">>,
+%%       image => <<"https://lh3.googleusercontent.com/...">>, 
+%%       urls => #{
+%%         <<"google">> => <<"https://plus.google.com/...">>}},
+%%   access_token => <<"...">>,
+%%   token_type => <<"Bearer">>,
+%%   expires_in => 3600,
+%%   id_token => <<"...">>,
+%%   code => <<"...">>}
 ```
 
 ### Overview
 
-#### Workflow
+Workflow is a fundamental unit of the library. It have to be defined as a module
+implementing at least the `pal_workflow` behaviour. Note that it is highly recommended to
+also implement the `pal_authentication` behaviour because it is responsible for the authentication schema creation flow.
 
-Workflow is a fundamental unit of the library. It may be defined as a function or a module.
+Any workflow has a state. The `pal:init/2` and `pal:group/2` functions are responsible for its initialization.
+They expect in the arguments: a name of the module (list of module names in case of group)
+with the workflow implementation and an initial options of the workflow.
 
-- The module can hold a state. And it is a preferred form to share a workflow with the community.
-- The function is useful for rapid implementation, debugging, an application-specific logic.
+The workflow can be executed by calling `pal:authenticate/{2,3}` function.
+It expects in the arguments: parsed data were received with the request,
+optional data from any other source (server-side data) and the previously created state of workflow.
 
-Any workflow consumes a set of parameters presented as an Erlang map `Input`,
-an instance of HTTP request `Req`, and optionally, a state `State` in case the workflow is a module.
+The result would contain data representing the authentication scheme `{ok, NewData}`
+or error with the reason `{error, Reason}` or a HTTP response `{stop, HttpResp}`
+must be passed back to a user to continue an authentication process.
+The error reason is represented by the tuple with the type and the error data
+in the workflow specific format (for instance, `{oauth2, #{error => access_denied}}`).
 
-The result of the workflow execution will be one of the following:
+![pal-authenticate][pal-authenticate-img]
 
-- *success()* :: `{Output, Req}`  
-	in case of success, `Output` is an Erlang map and contains a direct result of the workflow execution
-- *undeifned()* :: `{undefined, Req}`  
-	when not enough data for normal execution and the control should be delegated to an another workflow
-- *failure()* :: `{{fail, Reason}, Req}`  
-	when an error has occurred, `Reason` will contain the reason
-- *stop()* :: `{stop, Req}`  
-	when workflow must return an HTTP response as a part of normal execution  
-	(for instance, redirect to the login page of OAuth2 provider)
-
-![pal-workflow][pal-workflow-img]
-
-#### Auth Map
-
-The `Input` and the `Output` of workflow represent an authentication map which should have the following structure:
+#### Authentication Schema
 
 - `uid` -
-		An identifier unique to the given provider, such as a Twitter user ID. Should be stored as a string.
+		An identifier unique to the given provider, such as a Twitter user ID. Should be stored as a binary string.
+- **any credentials are passed through here (on the root level)**  
+		If the authenticating service provides some kind of access token
+		or other credentials upon authentication, these are passed through here.
+		Follow to the protocol specification in naming of keys (For instance, for OAuth2:
+		`access_token`, `token_type`, `expires_in`, etc. according to [RFC 6749][rfc6749-credentials])
 - `info` -
 		A map containing information about the user:
 	- `name` -
@@ -98,106 +172,32 @@ The `Input` and the `Output` of workflow represent an authentication map which s
 	- `phone` -
 			The telephone number of the authenticating user (no formatting is enforced).
 	- `urls` -
-			A map containing key value pairs of an identifier for the website and its URL.
+			A map containing key-value pairs of an identifier for the website and its URL.
 			For instance, an entry could be `#{<<"github">> => <<"https://github.com/manifest/pal">>}`.
 - `extra` -
 		Contains extra information returned from the authentication provider.
 		May be in provider-specific formats.
-	- `raw_info` -
-			A map of all information gathered about a user in the format it was gathered.
-			For example, for Twitter users this is a hash representing the JSON hash returned from the Twitter API.
-- `credentials`
-		If the authenticating service provides some kind of access token
-		or other credentials upon authentication, these are passed through here.
-		Follow to the protocol specification in naming of keys (For instance, in case of oauth2 protocol:
-		`access_token`, `token_type`, `expires_in`, etc. according to [RFC 6749][rfc6749-credentials])
 - `rules` -
 		Any rules, like ACL or user roles.
-		For instance, a user could have 'admin' role or read/write access to some files.
+		For instance, a user might have an 'admin' role or read/write access to some files.
 
-All keys are optional, but it is important to follow structure of the authentication map always when possible.
-
-#### Sequence of workflows
-
-Workflows can be connected in a sequence.
-The process of delegating control between workflows may differ depending on the type of sequence:
-
-- In case of and-sequence, the control will be delegated to the next workflow only if previous one is completed successfully, otherwise the execution of the sequence will be stopped.
-
-![pal-sequence-end][pal-workflow-sequence-and-img]
-
-- In case of or-sequence, the control will be delegated to the next workflow if previous one returns *undefined()*. The sequence will be stopped if any of workflow returns *stop()* or *failure()*
-
-![pal-sequence-or][pal-workflow-sequence-or-img]
-
-- and-sequence and or-sequences may be combined
-
-![pal-sequence-or-and][pal-workflow-sequence-or-and-img]
-
-#### Main workflow and the group of sequences
-
-On the top level (the level on which a user of the library operates)
-the sequences of workflows are combined into the main workflow (or into a group of sequences, in another words).
-The result obtained from the sequence of workflows is passed through one of callback-function
-and its value is reduced to one of two possible (by default, user of library can change this behaviour):
-
-- *success()* :: `{Output, Req}`  
-	if the result obtained from the sequence of workflows is *undefined()*
-	the `Output` will contain an empty Erlang map
-- *stop()* :: `{stop, Req}`  
-	if the result obtained from the sequence of workflows is *failure()*
-	the HTTP response with the status code equals 422 and the body containing a reason of failure in json format
-	will be generated
-
-![pal-workflow-group][pal-workflow-group-img]
-
-It is possible to create more than one group of sequences in the main workflow.
-In this case the control of execution is delegated to the next group on the basis of or-sequence.
-To be able to determine the execution of the which group is completed successfully,
-the user sets an input map for each group. That map will be merged to the final authentication map.
-
-#### Examples of creating the main workflow
-
-```erlang
-%% minimal example
-pal:new([workflow(1)]).
-pal:new([workflow(1)], Opts).
-pal:new(#{name => "example"}, [workflow(1)], Opts).
-
-%% and-sequence: workflow(1) and workflow(2)
-pal:new([workflow(1), workflow(2)]).
-
-%% or-sequence: workflow(1) or workflow(2)
-pal:new([[workflow(1), workflow(2)]]).
-
-%% or-and-sequence: (workflow(1) or workflow(2)) and workflow(3)
-pal:new([[workflow(1), workflow(2)], workflow(3)]).
-
-%% groups
-pal:init([{#{name => "example"}, pal_workflow}]).
-pal:init([{#{name => "example"}, [workflow(1), workflow(2)], Opts}]).
-pal:init([
-		{#{name => "example-1"}, [workflow(1), workflow(2)], LocalOpts1},
-		{#{name => "example-2"}, [workflow(3)], LocalOpts2}
-	], GlobalOpts).
-```
+All keys of authentication schema are optional, but it is important to follow this structure always when it's possible.
 
 ### List of workflows
 
-Provider | Workflow                                              | Description
----------|-------------------------------------------------------|----------------
-Google   | [`pal_google_oauth2_authcode`][pal-google-oauth2]     | Google Login (OAuth2 Authorization Code Grant)
-Google   | [`pal_google_oauth2_tokeninfo`][pal-google-oauth2]    | Validating an ID token
-Google   | [`pal_google_oauth2_people`][pal-google-oauth2]       | Obtaining user profile information
-Facebook | [`pal_facebook_oauth2_authcode`][pal-facebook-oauth2] | Facebook Login (OAuth2 Authorization Code Grant)
-Facebook | [`pal_facebook_oauth2_user`][pal-facebook-oauth2]     | Obtaining user profile information
-OAuth2   | [`pal_oauth2_authcode`][pal-oauth2]                   | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
-Basic    | [`pal_basic`][pal-basic]                              | HTTP Basic Access Authentication, [RFC 2617][rfc2617]
-Initial  | [`pal_authentication`][pal]                           | Initial and the simplest behaviour of any workflow
+Provider  | Workflow                                              | Description
+----------|-------------------------------------------------------|----------------
+Google    | [`pal_google_oauth2_authcode`][pal-google-oauth2]     | Google Login (OAuth2 Authorization Code Grant)
+Google    | [`pal_google_oauth2_tokeninfo`][pal-google-oauth2]    | Google OAuth2 token validation
+Google    | [`pal_google_oauth2_people`][pal-google-oauth2]       | Google+ profile information
+Facebook  | [`pal_facebook_oauth2_authcode`][pal-facebook-oauth2] | Facebook Login (OAuth2 Authorization Code Grant)
+Facebook  | [`pal_facebook_oauth2_user`][pal-facebook-oauth2]     | Facebook profile information
+OAuth2    | [`pal_oauth2_authcode`][pal-oauth2]                   | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
+Behaviour | [`pal_authentication`][pal]                           | Behaviour of PAL workflow
 
 ### License
 
-Provided under the terms of [the MIT license][license].
+The source code is provided under the terms of [the MIT license][license].
 
 [license]:http://www.opensource.org/licenses/MIT
 [travis]:https://travis-ci.org/manifest/pal
@@ -206,16 +206,10 @@ Provided under the terms of [the MIT license][license].
 [omniauth]:https://github.com/intridea/omniauth
 [friend]:https://github.com/cemerick/friend
 [passport]:https://github.com/jaredhanson/passport
-[rfc2617]:https://tools.ietf.org/html/rfc2617
 [rfc6749]:http://tools.ietf.org/html/rfc6749
 [rfc6749-credentials]:http://tools.ietf.org/html/rfc6749#section-4.2.2
-[pal-workflow-img]:misc/pal-workflow.png
-[pal-workflow-sequence-and-img]:misc/pal-workflow-sequence-and.png
-[pal-workflow-sequence-or-img]:misc/pal-workflow-sequence-or.png
-[pal-workflow-sequence-or-and-img]:misc/pal-workflow-sequence-or-and.png
-[pal-workflow-group-img]:misc/pal-workflow-group.png
+[pal-authenticate-img]:misc/pal-authenticate.png
 [pal]:https://github.com/manifest/pal
-[pal-basic]:https://github.com/manifest/pal-basic
 [pal-oauth2]:https://github.com/manifest/pal-oauth2.git
 [pal-google-oauth2]:https://github.com/manifest/pal-google-oauth2.git
 [pal-facebook-oauth2]:https://github.com/manifest/pal-facebook-oauth2.git
