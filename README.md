@@ -6,12 +6,9 @@ The standardized multi-provider authentication library.
 
 ### Introduction
 
-PAL is designed to minimize the efforts of integration
-a user authentication in web applications.
-It have written in pure Erlang and
-independed from HTTP server software or whatever framework.
-Any developer can extend the library, create their own authentication workflow
-for everything from Facebook to LDAP.
+PAL is designed to minimize the efforts of integration a user authentication to the web application.
+It can be used with any HTTP server and any developer can extend the library,
+create their own authentication workflow for everything from Facebook to LDAP.
 PAL is inspired by [OmniAuth][omniauth], [Friend][friend] and [Passport][passport].
 
 #### How to use
