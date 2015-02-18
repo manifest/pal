@@ -77,14 +77,14 @@ pal:authenticate(#{code => <<"...">>}, Workflow).
 
 ```erlang
 Data =
-	lists:foldl(
-		fun({Key, Val}, M) ->
-			maps:put(binary_to_existing_atom(Key, utf8), Val, M)
-		end,
-		#{},
-		pt_kvlist:with(
-			[<<"code">>, <<"state">>, <<"error">>],
-			cowboy_req:parse_qs(Req)))
+  lists:foldl(
+    fun({Key, Val}, M) ->
+      maps:put(binary_to_existing_atom(Key, utf8), Val, M)
+    end,
+    #{},
+    pt_kvlist:with(
+      [<<"code">>, <<"state">>, <<"error">>],
+      cowboy_req:parse_qs(Req))).
 ```
 
 #### Group
