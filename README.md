@@ -77,14 +77,14 @@ pal:authenticate(#{code => <<"...">>}, Workflow).
 
 ```erlang
 Data =
-	lists:foldl(
-		fun({Key, Val}, M) ->
-			maps:put(binary_to_existing_atom(Key, utf8), Val, M)
-		end,
-		#{},
-		pt_kvlist:with(
-			[<<"code">>, <<"state">>, <<"error">>],
-			cowboy_req:parse_qs(Req)))
+  lists:foldl(
+    fun({Key, Val}, M) ->
+      maps:put(binary_to_existing_atom(Key, utf8), Val, M)
+    end,
+    #{},
+    pt_kvlist:with(
+      [<<"code">>, <<"state">>, <<"error">>],
+      cowboy_req:parse_qs(Req))).
 ```
 
 #### Group
@@ -197,7 +197,7 @@ Behaviour | [`pal_authentication`][pal]                           | Behaviour of
 The source code is provided under the terms of [the MIT license][license].
 
 [license]:http://www.opensource.org/licenses/MIT
-[travis]:https://travis-ci.org/manifest/pal
+[travis]:https://travis-ci.org/manifest/pal?branch=master
 [travis_img]:https://secure.travis-ci.org/manifest/pal.png
 [cowboy]:https://github.com/extend/cowboy
 [omniauth]:https://github.com/intridea/omniauth

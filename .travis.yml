@@ -1,4 +1,6 @@
 language: erlang
+install: make deps
+script: make eunit
 notifications:
   email:
     on_success: never

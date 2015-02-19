@@ -1,4 +1,4 @@
-%% ------------------------------------------------------------------
+%% ----------------------------------------------------------------------------
 %% The MIT License
 %%
 %% Copyright (c) 2014-2015 Andrei Nesterov <ae.nesterov@gmail.com>
@@ -20,23 +20,25 @@
 %% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 %% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 %% IN THE SOFTWARE.
-%% ------------------------------------------------------------------
+%% ----------------------------------------------------------------------------
 
 -module(pal_workflow).
 
 %% Types
 
+-type workflow()     :: pt_workflow:workflow().
+-type declaration()  :: pt_workflow:declaration().
 -type error_reason() :: {Type :: atom(), Data :: any()}.
 -type result()
 	:: {ok,    Data     :: map()}
 	 | {stop,  HttpResp :: pal_http:response()}
 	 | {error, Reason   :: error_reason()}.
 
--export_type([result/0, error_reason/0]).
+-export_type([workflow/0, declaration/0, result/0, error_reason/0]).
 
 %% Callbacks
 
--callback decl() -> pt_workflow:declaration().
+-callback decl() -> declaration().
 
 %% Optional.
 %%

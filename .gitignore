@@ -4,18 +4,19 @@
 .Spotlight-V100
 .Trashes
 
-# vim
+# Vim
 .*.sw[a-z]
 *.un~
 Session.vim
 
-# project
+# Erlang
 deps
 ebin
 doc
 log
-priv/mns_drv.so
-.eunit
-.dialyzer_plt
-.rebar
+_rel
+relx
+erl_crash.dump
+.erlang.mk.packages.v2
+*.plt
 
