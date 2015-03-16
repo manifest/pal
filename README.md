@@ -141,7 +141,7 @@ in the workflow specific format (for instance, `{oauth2, #{error => access_denie
 #### Authentication Schema
 
 - `uid` -
-		An identifier unique to the given provider, such as a Twitter user ID. Should be stored as a binary string.
+		An identifier unique to the given workflow. Should be stored as a binary string.
 - **any credentials are passed through here (on the root level)**  
 		If the authenticating service provides some kind of access token
 		or other credentials upon authentication, these are passed through here.
