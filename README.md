@@ -159,6 +159,9 @@ in the workflow specific format (for instance, `{oauth2, #{error => access_denie
 			The username of an authenticating user (such as your @-name from Twitter or GitHub account name).
 	- `first_name`
 	- `last_name`
+	- `gender` -
+			The person's gender as a binary string. Possible values include, but are not limited to,
+			the following values: `<<"male">>`, `<<"female">>`.
 	- `location` -
 			The general location of the user, usually a city and state.
 	- `description` -
