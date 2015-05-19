@@ -141,7 +141,7 @@ in the workflow specific format (for instance, `{oauth2, #{error => access_denie
 #### Authentication Schema
 
 - `uid` -
-		An identifier unique to the given provider, such as a Twitter user ID. Should be stored as a binary string.
+		An identifier unique to the given workflow. Should be stored as a binary string.
 - **any credentials are passed through here (on the root level)**  
 		If the authenticating service provides some kind of access token
 		or other credentials upon authentication, these are passed through here.
@@ -159,6 +159,9 @@ in the workflow specific format (for instance, `{oauth2, #{error => access_denie
 			The username of an authenticating user (such as your @-name from Twitter or GitHub account name).
 	- `first_name`
 	- `last_name`
+	- `gender` -
+			The person's gender as a binary string. Possible values include, but are not limited to,
+			the following values: `<<"male">>`, `<<"female">>`.
 	- `location` -
 			The general location of the user, usually a city and state.
 	- `description` -
