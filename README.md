@@ -39,7 +39,7 @@ All we now need, parse the request and pass that data to the `pal:authenticate/2
 ```erlang
 pal:authenticate(Data, Workflow).
 
-%%   access_token => <<"...">>,
+%% #{access_token => <<"...">>,
 %%   token_type => <<"Bearer">>,
 %%   expires_in => 3599,
 %%   id_token => <<"...">>,
@@ -66,7 +66,7 @@ if any of them appears, and pass that data to the `pal:authenticate/2` function.
 ```erlang
 pal:authenticate(#{code => <<"...">>}, Workflow).
 
-%%   access_token => <<"...">>,
+%% #{access_token => <<"...">>,
 %%   token_type => <<"Bearer">>,
 %%   expires_in => 3599,
 %%   id_token => <<"...">>,
