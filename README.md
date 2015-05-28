@@ -6,7 +6,7 @@ The standardized multi-provider authentication library.
 
 ### Introduction
 
-PAL is designed to minimize the efforts of integration a user authentication to the web application.
+PAL is designed to minimize the efforts of integration an authentication workflow to the web application.
 It can be used with any HTTP server and any developer can extend the library,
 create their own authentication workflow for everything from Facebook to LDAP.
 PAL is inspired by [OmniAuth][omniauth], [Friend][friend] and [Passport][passport].
@@ -39,9 +39,9 @@ All we now need, parse the request and pass that data to the `pal:authenticate/2
 ```erlang
 pal:authenticate(Data, Workflow).
 
-%% #{access_token => <<"...">>,
+%%   access_token => <<"...">>,
 %%   token_type => <<"Bearer">>,
-%%   expires_in => 3600,
+%%   expires_in => 3599,
 %%   id_token => <<"...">>,
 %%   code => <<"...">>}
 ```
@@ -51,7 +51,7 @@ That's all.
 #### How it works
 
 When a user come to us first time, the request doesn't contain any data.
-We have to redirect a user to authentication provider and we do it:
+We have to redirect them to an authentication provider and we do it:
 
 ```erlang
 pal:authenticate(#{}, Workflow).
@@ -66,9 +66,9 @@ if any of them appears, and pass that data to the `pal:authenticate/2` function.
 ```erlang
 pal:authenticate(#{code => <<"...">>}, Workflow).
 
-%% #{access_token => <<"...">>,
+%%   access_token => <<"...">>,
 %%   token_type => <<"Bearer">>,
-%%   expires_in => 3600,
+%%   expires_in => 3599,
 %%   id_token => <<"...">>,
 %%   code => <<"...">>}
 ```
@@ -106,12 +106,13 @@ pal:authenticate(Data, Workflow).
 %%     #{name => <<"John Doe">>,
 %%       first_name => <<"John">>,
 %%       last_name => <<"Doe">>,
-%%       image => <<"https://lh3.googleusercontent.com/...">>, 
-%%       urls => #{
-%%         <<"google">> => <<"https://plus.google.com/...">>}},
+%%       email => <<"john@example.com">>,
+%%       gender => <<"male">>,
+%%       image => <<"https://lh3.googleusercontent.com/...">>,
+%%       uri => <<"https://plus.google.com/...">>},
 %%   access_token => <<"...">>,
 %%   token_type => <<"Bearer">>,
-%%   expires_in => 3600,
+%%   expires_in => 3599,
 %%   id_token => <<"...">>,
 %%   code => <<"...">>}
 ```
@@ -148,35 +149,36 @@ in the workflow specific format (for instance, `{oauth2, #{error => access_denie
 		Follow to the protocol specification in naming of keys (For instance, for OAuth2:
 		`access_token`, `token_type`, `expires_in`, etc. according to [RFC 6749][rfc6749-credentials])
 - `info` -
-		A map containing information about the user:
+		A map containing **primary** information about the user:
 	- `name` -
 			The best display name known to the workflow.
 			Usually a concatenation of first and last name, but may also be an arbitrary designator or nickname for some workflows.
 	- `email` -
 			The e-mail of the authenticating user.
-			Should be provided if at all possible (but some sites such as Twitter do not provide this information).
 	- `nickname` -
 			The username of an authenticating user (such as your @-name from Twitter or GitHub account name).
 	- `first_name`
 	- `last_name`
 	- `gender` -
-			The person's gender as a binary string. Possible values include, but are not limited to,
+			The user's gender as a binary string. Possible values include, but are not limited to,
 			the following values: `<<"male">>`, `<<"female">>`.
 	- `location` -
 			The general location of the user, usually a city and state.
 	- `description` -
 			A short description of the authenticating user.
 	- `image` -
-			A URL representing a profile image of the authenticating user.
+			A URI representing a profile image of the authenticating user.
 			Where possible, should be specified to a square, roughly 50x50 pixel image.
 	- `phone` -
 			The telephone number of the authenticating user (no formatting is enforced).
-	- `urls` -
-			A map containing key-value pairs of an identifier for the website and its URL.
-			For instance, an entry could be `#{<<"github">> => <<"https://github.com/manifest/pal">>}`.
+	- `uri` -
+			The URI of this user's profile.
 - `extra` -
-		Contains extra information returned from the authentication provider.
-		May be in provider-specific formats.
+		A map containing extra information returned from the authentication provider.
+		Lists of maps are prefered in this section. For instance,
+		if more than one email of a user were available we could put them here
+		and provide additional information for each of them.
+		`[ #{type => <<"work">>, value => <<"john@example.com">>}, ...]`
 - `rules` -
 		Any rules, like ACL or user roles.
 		For instance, a user might have an 'admin' role or read/write access to some files.
