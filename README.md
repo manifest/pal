@@ -96,7 +96,7 @@ to obtain the Google+ profile information.
 ```erlang
 Workflow =
   pal:group(
-    [pal_google_oauth2_authcode, pal_google_oauth2_people],
+    [pal_google_oauth2_authcode, pal_google_plus_user],
     Options),
 
 pal:authenticate(Data, Workflow).
@@ -187,15 +187,15 @@ All keys of authentication schema are optional, but it is important to follow th
 
 ### List of workflows
 
-Provider  | Workflow                                              | Description
-----------|-------------------------------------------------------|----------------
-Google    | [`pal_google_oauth2_authcode`][pal-google-oauth2]     | Google Login (OAuth2 Authorization Code Grant)
-Google    | [`pal_google_oauth2_tokeninfo`][pal-google-oauth2]    | Google OAuth2 token validation
-Google    | [`pal_google_oauth2_people`][pal-google-oauth2]       | Google+ profile information
-Facebook  | [`pal_facebook_oauth2_authcode`][pal-facebook-oauth2] | Facebook Login (OAuth2 Authorization Code Grant)
-Facebook  | [`pal_facebook_oauth2_user`][pal-facebook-oauth2]     | Facebook profile information
-OAuth2    | [`pal_oauth2_authcode`][pal-oauth2]                   | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
-Behaviour | [`pal_authentication`][pal]                           | Behaviour of PAL workflow
+Provider  | Workflow                                       | Description
+----------|------------------------------------------------|----------------
+Google    | [`pal_google_oauth2_authcode`][pal-google]     | Google Login (OAuth2 Authorization Code Grant)
+Google    | [`pal_google_openid_user`][pal-google]         | Google OpenID Connect user's data
+Google    | [`pal_google_plus_user`][pal-google]           | Google+ user's profile data
+Facebook  | [`pal_facebook_oauth2_authcode`][pal-facebook] | Facebook Login (OAuth2 Authorization Code Grant)
+Facebook  | [`pal_facebook_user`][pal-facebook]            | Facebook user's profile data
+OAuth2    | [`pal_oauth2_authcode`][pal-oauth2]            | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
+Behaviour | [`pal_authentication`][pal]                    | Behaviour of PAL workflow
 
 ### License
 
@@ -213,7 +213,7 @@ The source code is provided under the terms of [the MIT license][license].
 [pal-authenticate-img]:misc/pal-authenticate.png
 [pal]:https://github.com/manifest/pal
 [pal-oauth2]:https://github.com/manifest/pal-oauth2.git
-[pal-google-oauth2]:https://github.com/manifest/pal-google-oauth2.git
-[pal-facebook-oauth2]:https://github.com/manifest/pal-facebook-oauth2.git
+[pal-google]:https://github.com/manifest/pal-google.git
+[pal-facebook]:https://github.com/manifest/pal-facebook.git
 [pal-example]:https://github.com/manifest/pal-example
 
