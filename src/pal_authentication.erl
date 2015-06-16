@@ -35,7 +35,7 @@
 -define(INCLUDES, [uid, credentials, info, extra, rules]).
 
 %% Types
--type rawdata() :: [{binary(), binary() | true}].
+-type rawdata() :: [{binary(), any()}].
 -type result()
 	:: {ok,    Data     :: rawdata()}
 	 | {stop,  HttpResp :: pal_http:response()}
