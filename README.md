@@ -6,7 +6,7 @@ The standardized multi-provider authentication library.
 
 ### Introduction
 
-PAL is designed to minimize the efforts of integration an authentication workflow to the web application.
+PAL is designed to simplify an integration of authentication into web application.
 It can be used with any HTTP server and any developer can extend the library,
 create their own authentication workflow for everything from Facebook to LDAP.
 PAL is inspired by [OmniAuth][omniauth], [Friend][friend] and [Passport][passport].
@@ -194,6 +194,10 @@ Google    | [`pal_google_openid_user`][pal-google]         | Google OpenID Conne
 Google    | [`pal_google_plus_user`][pal-google]           | Google+ user's profile data
 Facebook  | [`pal_facebook_oauth2_authcode`][pal-facebook] | Facebook Login (OAuth2 Authorization Code Grant)
 Facebook  | [`pal_facebook_user`][pal-facebook]            | Facebook user's profile data
+VK        | [`pal_vk_oauth2_authcode`][pal-vk]             | VKontakte Login (OAuth2 Authorization Code Grant)
+VK        | [`pal_vk_user`][pal-vk]                        | VKontakte user's profile data
+OK        | [`pal_ok_oauth2_authcode`][pal-ok]             | Odnoklassniki Login (OAuth2 Authorization Code Grant)
+OK        | [`pal_ok_user`][pal-ok]                        | Odnoklassniki user's profile data
 OAuth2    | [`pal_oauth2_authcode`][pal-oauth2]            | OAuth2 Authorization Code Grant, [RFC 6749][rfc6749]
 Behaviour | [`pal_authentication`][pal]                    | Behaviour of PAL workflow
 
@@ -215,5 +219,7 @@ The source code is provided under the terms of [the MIT license][license].
 [pal-oauth2]:https://github.com/manifest/pal-oauth2.git
 [pal-google]:https://github.com/manifest/pal-google.git
 [pal-facebook]:https://github.com/manifest/pal-facebook.git
+[pal-vk]:https://github.com/manifest/pal-vk.git
+[pal-ok]:https://github.com/manifest/pal-ok.git
 [pal-example]:https://github.com/manifest/pal-example
 
